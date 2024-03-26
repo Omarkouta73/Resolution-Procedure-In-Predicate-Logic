@@ -48,6 +48,8 @@ def convert_to_cnf():
     move_negation_inward()
     standardize_variable_names()
     move_quantifiers_left()
+
+# TODO: Khaled's Work
     skolemize()
     remove_universal()
     convert_to_conjuctive_form()
@@ -55,9 +57,12 @@ def convert_to_cnf():
     pass
 
 
+# TODO: Khaled's Work
 def apply_resolution():
     convert_to_cnf()
+
     # use unification if needed
     unification()
+
     # resolution
     pass
