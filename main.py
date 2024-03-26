@@ -1,3 +1,29 @@
+"""
+Faculty Of Computers & Artificial Intelligence - Cairo University
+Authors:
+Khaled Waleed Al-Shaer 20210127
+Omar Kouta 2022______ TODO
+
+Reasoning and Knowledge Representation - Assignment 1
+
+CNF Converter for First Order Logic
+"""
+
+"""
+Documentation for Usage
+
+- Every sentence is a list
+- Every sentence consists of an operator and operands (also called literals)
+- For example A ^ (B or C) => ["and", "A", ["or", "B", "C"]]
+
+Available operators or quantifiers with Examples ("A" or any constant like it can be altered by another sentence)
+["not", "A"]
+["or", "A", "B"]
+["and", "A", "B"]
+["implies", "A", "B"]
+["iff", "A", "B"]
+"""
+
 def remove_biconditional(expression):
     # A <--> B == ["iff", "A", "B"]
     if expression[0] == "iff":
@@ -10,6 +36,7 @@ def remove_biconditional(expression):
     for literal in expression:
         if len(literal) > 1:
             remove_biconditional(literal)
+
 
 def remove_imply(expression):
     # A --> B [implies, A, B] == [or, [not, A], B]
@@ -29,10 +56,9 @@ def eliminate_implication(expression):
     remove_imply(expression)
 
 
-def deMorgan(expression): # [not, [not, P]] == [and, [not, literal1], [not, literal2]]
+def deMorgan(expression):  # [not, [not, P]] == [and, [not, literal1], [not, literal2]]
     if expression[0] == "not":
         literal = expression[1]
-
 
         if literal[0] == "not":
             del expression[:]
@@ -69,7 +95,7 @@ def deMorgan(expression): # [not, [not, P]] == [and, [not, literal1], [not, lite
                     expression.append(["not", lit])
 
 
-        elif literal[0] == "exist": # [not, [exist, P]] == [all, [not, P]]
+        elif literal[0] == "exist":  # [not, [exist, P]] == [all, [not, P]]
             del expression[:]
             expression.append("all")
             for lit in literal:
@@ -79,7 +105,7 @@ def deMorgan(expression): # [not, [not, P]] == [and, [not, literal1], [not, lite
                     expression.append(["not", lit])
 
 
-        elif literal[0] == "all": # [not, [all, P]] == [exist, [not, P]]
+        elif literal[0] == "all":  # [not, [all, P]] == [exist, [not, P]]
             del expression[:]
             expression.append("exist")
             for lit in literal:
@@ -99,7 +125,7 @@ def move_negation_inward(expression):
 
 
 def standardize_variable_names():
-    pass
+
 
 
 def move_quantifiers_left():
@@ -139,7 +165,7 @@ def convert_to_cnf(expression):
     standardize_variable_names()
     move_quantifiers_left()
 
-# TODO: Khaled's Work
+    # TODO: Khaled's Work
     skolemize()
     remove_universal()
     convert_to_conjuctive_form()
