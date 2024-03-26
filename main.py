@@ -22,7 +22,14 @@ Available operators or quantifiers with Examples ("A" or any constant like it ca
 ["and", "A", "B"]
 ["implies", "A", "B"]
 ["iff", "A", "B"]
+
 """
+
+def isConstant(expression):
+    if expression[0] in ["and", "or", "not", "implies", "iff", "exist", "all"]:
+        return False
+    return True
+
 
 def remove_biconditional(expression):
     # A <--> B == ["iff", "A", "B"]
@@ -124,7 +131,11 @@ def move_negation_inward(expression):
     deMorgan(expression)
 
 
-def standardize_variable_names():
+def standardize_variable_names(expression):
+    independent_var = {}
+    def search_for_indepenedent_variables(expression):
+
+
 
 
 
