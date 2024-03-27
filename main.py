@@ -11,6 +11,10 @@ CNF Converter for First Order Logic
 import copy
 
 
+operations = ["IF", "AND", "OR", "NOT", "IMPLIES"]
+quantifiers = ["FORALL", "EXISTS"]
+
+
 class Node:
     def __init__(self, type, value):  # Constructor
         self.set_node(type, value)
@@ -44,11 +48,82 @@ class Node:
             text += child_node.__str__(level + 1)
         return text
 
+def parse_tree(args):
+    stack = []
+    for i in range(len(args)):
+        current_index = i
+
+        element = args[current_index]
+        element_type = element[0]
+        element_value = element[1]
+
+        if element_type == "open_bracket":
+            continue
+        elif element_type == "close_bracket":  # final destination
+            picked = []
+            while True:
+                parent = stack.pop()
+
+                parent_type = parent.get_element_type()
+                parent_value = parent.get_element_value()
+
+                if parent_type == "op" or parent_type == "quant" or parent_type == "function" or parent_type == "predicate":
+                    children = parent.get_child_nodes()
+                    children_nums = len(children)
+
+                    if children_nums < 1:
+                        break
+
+                picked.append(parent)
+
+            parent.set_child_nodes(picked)
+
+            stack.append(parent)
+
+        else:
+            node = Node(element_type, element_value)
+            stack.append(node)
+
+    assert (len(stack) == 1)
+
+    return stack.pop()
+
+
 
 def parser(statements):
-    arguments = []
+    global prev_arg, arg_type
+    characters = statements
+    args = []
 
-    return True
+    arg_list = characters.replace('(', ' ( ').replace(')', ' ) ').split()
+    for i in range(len(arg_list)):
+        arg = arg_list[i]
+        if i - 1 >= 0:
+            prev_arg = arg_list[i - 1]
+        if i + 1 < len(arg_list):
+            next_arg = arg_list[i + 1]
+
+        if arg == "(":
+            arg_type = "open_bracket"
+        elif arg == ")":
+            arg_type = "close_bracket"
+        elif prev_arg == "(":
+            if arg in operations:
+                arg_type = "op"
+            elif arg in quantifiers:
+                arg_type = "quant"
+            else:
+                arg_type = "function"
+        elif prev_arg in quantifiers:
+            arg_type = "variable"  # quantifier counter
+        elif arg.isalnum():  # alpha-number
+            arg_type = "symbol"
+
+        arg_tuple = (arg_type, arg)
+        args.append(arg_tuple)
+
+    return parse_tree(args)
+
 
 
 def correct(tree):
@@ -154,6 +229,6 @@ def find_true_statements(statements):
     return results
 
 
-statements = [["(FORALL x (IMPLIES (p x) (q x)))", "(p (f a))", "(NOT (q (f a)))"]]  # this is inconsistent
+statements = [["((P x) OR (Q x))"], ["(FORALL x (IMPLIES (p x) (q x)))", "(p (f a))", "(NOT (q (f a)))"]]  # this is inconsistent
 
 print(find_true_statements(statements))
