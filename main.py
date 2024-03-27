@@ -62,9 +62,23 @@ def remove_conditionals(tree):
 
     children = tree.get_children()
 
-    if parent_type == "op" and val
+    if parent_type == "op" and parent_value == "IMPLIES":
+        tree.set_node("op", "OR")
 
-    return True
+        child = children[-1]
+
+        new_node = Node("op", "NOT")
+        new_node.add_child(child)
+
+        children[-1] = new_node
+
+        tree.set_children(children)
+
+    children = tree.get_children()
+    for i in range(len(children)):
+        remove_conditionals(children[i])
+
+    return tree
 
 
 def deMorgan(tree):
