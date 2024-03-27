@@ -157,7 +157,60 @@ def remove_conditionals(tree):
 
 
 def deMorgan(tree):
-    return True
+    parent = tree
+    parent_type = tree.get_type()
+    parent_value = tree.get_value()
+
+    children = tree.get_children()
+
+    if parent_type == "op" and parent_value == "Not":
+        child = children[0]
+
+        child_type = child.get_type()
+        child_value = child.get_value()
+
+        new_type = new_value = ""
+
+        # Reversing the Operator / Quantifier
+        if child_type == "op":
+            new_type = "op"
+            if child_value == "AND":
+                new_value = "OR"
+            elif child_value == "OR":
+                new_value = "AND"
+
+        elif child_type == "quant":
+            new_type = "quant"
+            if child_value == "FORALL":
+                new_value = "EXISTS"
+            elif child_value == "EXISTS":
+                new_value = "FORALL"
+
+        if new_type != "" and new_value != "":
+            tree.set_node(new_type, new_value)
+
+            grandsons = child.get_children()
+
+            new_children = []
+
+            for grandson in grandsons:
+                grandson_type = grandson.get_type()
+
+                if grandson_type == "variable":
+                    new_children.append(grandson)
+                else:
+                    new_node = Node(parent_type, parent_value)
+                    new_node.add_child(grandson)
+
+                    new_children.append(new_node)
+
+            tree.set_children(new_children)
+
+    children = tree.get_children()
+    for i in range(len(children)):
+        deMorgan(children[i])
+
+    return tree
 
 
 def double_not(tree):
