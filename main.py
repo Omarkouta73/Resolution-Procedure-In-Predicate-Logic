@@ -11,27 +11,121 @@ CNF Converter for First Order Logic
 import copy
 
 
+class Node:
+    def __init__(self, type, value):  # Constructor
+        self.set_node(type, value)
+        self.children = []
+
+    def set_node(self, type, value):
+        self.type = type
+        self.value = value
+
+    def add_child(self, node):
+        self.children.append(node)
+
+    def set_children(self, children):
+        self.children = children
+
+    def get_children(self):
+        return self.children
+
+    def get_type(self):
+        return self.type
+
+    def get_value(self):
+        return self.value
+
+    def get_text(self):
+        return "[" + self.get_type() + "] " + self.get_value()
+
+    def __str__(self, level=0):
+        text = "--" * level + self.get_text() + "\n"
+        for child_node in self.children:
+            text += child_node.__str__(level + 1)
+        return text
+
+
 def parser(statements):
     arguments = []
 
     return True
 
-def remove_conditionals(tree):
+
+def correct(tree):
     return True
 
-def deMorgan():
+
+def remove_conditionals(tree):
+    tree = Node("NOT", "x") # TODO: remove this, this is only for IDE help
+    parent_type = tree.get_type()
+    parent_value = tree.get_value()
+
+    children = tree.get_children()
+
+    if parent_type == "op" and val
+
+    return True
+
+
+def deMorgan(tree):
+    return True
+
+
+def double_not(tree):
+    return True
+
+
+def standardize(tree):
+    return True
+
+
+def all_left(tree):
+    return True
+
+
+def skolemize(tree):
+    return True
+
+
+def drop_universal(tree):
+    return True
+
+
+def fix_symbols(tree):
+    return True
+
+
+def CNF(tree):
+    return True
+
+
+def clausal_from_ands(tree):
+    return True
+
+
+def resolution(clauses):
+    return True
+
 
 def determine_if_true(statement):
     clauses = []
-    for i in range(0, len(statement)): # for all statements within a list of statement
+    for i in range(0, len(statement)):  # for all statements within a list of statement
         tree = parser(statement[i])
-        # tree = correct(tree) # TODO: We DON"T UNDERSTAND WHAT THIS DOES
+        tree = correct(tree)  # TODO: We DON"T UNDERSTAND WHAT THIS DOES
         tree = remove_conditionals(tree)
-        tree = deMorgan()
+        tree = deMorgan(tree)
+        tree = double_not(tree)
+        tree = standardize(tree)
+        tree = all_left(tree)
+        tree = skolemize(tree)
+        tree = drop_universal(tree)
+        tree = fix_symbols(tree)
+        tree = CNF(tree)
 
-
-
-    return True  # TODO
+        # TODO: Understand this
+        predicates = clausal_from_ands(tree)
+        clauses.append(predicates)
+    return resolution(clauses)
 
 
 def find_true_statements(statements):
