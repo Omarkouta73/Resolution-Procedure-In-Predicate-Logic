@@ -214,7 +214,35 @@ def deMorgan(tree):
 
 
 def double_not(tree):
-    return True
+    current_node = tree
+    parent_value = tree.get_value()
+
+    if len(current_node.get_children()) == 0:
+        return tree
+
+    if parent_value == "NOT":
+        child = current_node.get_children()[0]  # it must have only 1 child
+        child_value = child.get_value()
+
+        if child_value == "NOT":
+            current_node.set_node(child.get_children()[0].get_type(),
+                                  child.get_children()[0].get_value())
+
+        if len(current_node.get_children()[0].get_children()[0]) == 2:
+            current_node.get_children()[1] = \
+                current_node.get_children()[0].get_children()[0].get_children()[1]
+
+        current_node.get_children()[0] = \
+            current_node.get_children()[0].get_children()[0].get_children()[0]
+
+        double_not(current_node)
+
+    if len(current_node.get_children()) == 2:
+        double_not(current_node.get_children()[1])
+
+    double_not(current_node.get_children()[0])
+
+    return tree
 
 
 def standardize(tree):
@@ -282,6 +310,6 @@ def find_true_statements(statements):
     return results
 
 
-statements = [["((P x) OR (Q x))"], ["(FORALL x (IMPLIES (p x) (q x)))", "(p (f a))", "(NOT (q (f a)))"]]  # this is inconsistent
+statements = [["(FORALL x (IMPLIES (p x) (q x)))", "(p (f a))", "(NOT (q (f a)))"]]  # this is inconsistent
 
 print(find_true_statements(statements))
