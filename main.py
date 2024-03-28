@@ -66,8 +66,8 @@ def parse_tree(args):
             while True:
                 parent = stack.pop()
 
-                parent_type = parent.get_element_type()
-                parent_value = parent.get_element_value()
+                parent_type = parent.get_type()
+                parent_value = parent.get_value()
 
                 if parent_type == "op" or parent_type == "quant" or parent_type == "function" or parent_type == "predicate":
                     children = parent.get_child_nodes()
@@ -86,7 +86,11 @@ def parse_tree(args):
             node = Node(element_type, element_value)
             stack.append(node)
 
-    assert (len(stack) == 1)
+    while (len(stack) > 1):
+        childs = []
+        childs.append(stack.pop())
+        childs.append(stack.pop())
+        stack[-1].set_child_nodes(childs)
 
     return stack.pop()
 
@@ -127,16 +131,16 @@ def parser(statements):
 
 
 def correct(tree):
-    S_type = tree.get_element_type()
-    S_value = tree.get_element_value()
+    S_type = tree.get_type()
+    S_value = tree.get_value()
 
     children = tree.get_child_nodes()
 
     for i in range(len(children)):
         child = children[i]
 
-        ch_type = child.get_element_type()
-        ch_value = child.get_element_value()
+        ch_type = child.get_type()
+        ch_value = child.get_value()
 
         if (S_type == "function"):
             if (ch_type == "function"):
@@ -280,16 +284,16 @@ def double_not(tree):
 
 def standardize(tree):
     variable_names = {}
-    S_type = tree.get_element_type()
-    S_value = tree.get_element_value()
+    S_type = tree.get_type()
+    S_value = tree.get_value()
 
     children = tree.get_child_nodes()
 
     if S_type == "quant":
         child = children[-1]
 
-        ch_type = child.get_element_type()
-        ch_value = child.get_element_value()
+        ch_type = child.get_type()
+        ch_value = child.get_value()
 
         variable_names[ch_value] = ch_value + "_" + str(random.randint(0, 10000))
 
@@ -300,8 +304,8 @@ def standardize(tree):
     elif S_type == "function" or S_type == "predicate":
         for i in range(len(children)):
             child = children[i]
-            ch_type = child.get_element_type()
-            ch_value = child.get_element_value()
+            ch_type = child.get_type()
+            ch_value = child.get_value()
 
             if ch_value in variable_names:
                 child.set_node(ch_type, variable_names[ch_value])
@@ -475,7 +479,7 @@ def skolemize(tree):
 
 
 def drop_universal(tree):
-    S_type = tree.get_element_type()
+    S_type = tree.get_type()
     node = tree
     children = node.get_child_nodes()
 
@@ -484,12 +488,12 @@ def drop_universal(tree):
     else:
         if S_type == "quant":
             leftNode = children[1]
-            leftNodeValue = leftNode.get_element_value()
+            leftNodeValue = leftNode.get_value()
             universal_varList.append(leftNodeValue)
 
             rightNode = children[0]
-            rightNodeType = rightNode.get_element_type()
-            rightNodeValue = rightNode.get_element_value()
+            rightNodeType = rightNode.get_type()
+            rightNodeValue = rightNode.get_value()
 
             rightChildChildren = rightNode.get_child_nodes()
 
@@ -508,9 +512,9 @@ def drop_universal(tree):
 
 def fix_symbols(tree):
     node = tree
-    if node.get_element_type() == "variable":
-        if node.get_element_value() not in universal_varList:
-            node.set_node("symbol", node.get_element_value())
+    if node.get_type() == "variable":
+        if node.get_value() not in universal_varList:
+            node.set_node("symbol", node.get_value())
 
     if len(node.get_child_nodes()) == 0:
         return tree
@@ -522,8 +526,8 @@ def fix_symbols(tree):
 
 
 def CNF(tree):
-    parent_type = tree.get_element_type()
-    parent_value = tree.get_element_value()
+    parent_type = tree.get_type()
+    parent_value = tree.get_value()
 
     children = tree.get_child_nodes()
     n_child_nodes = len(children)
@@ -591,8 +595,8 @@ def CNF(tree):
 
 
 def is_cnf(tree):
-    _symbol_type = tree.get_element_type()
-    _symbol_value = tree.get_element_value()
+    _symbol_type = tree.get_type()
+    _symbol_value = tree.get_value()
 
     _child_nodes = tree.get_child_nodes()
 
@@ -601,8 +605,8 @@ def is_cnf(tree):
         for i in range(len(_child_nodes)):
             _child_node = _child_nodes[i]
 
-            _child_node_symbol_type = _child_node.get_element_type()
-            _child_node_symbol_value = _child_node.get_element_value()
+            _child_node_symbol_type = _child_node.get_type()
+            _child_node_symbol_value = _child_node.get_value()
 
             if not (_child_node_symbol_type == "op" and _child_node_symbol_value == "OR"):
                 return False
@@ -612,8 +616,8 @@ def is_cnf(tree):
             for i in range(len(_child_child_nodes)):
                 _child_child_node = _child_child_nodes[i]
 
-                _child_child_node_symbol_type = _child_child_node.get_element_type()
-                _child_child_node_symbol_value = _child_child_node.get_element_value()
+                _child_child_node_symbol_type = _child_child_node.get_type()
+                _child_child_node_symbol_value = _child_child_node.get_value()
 
                 if (_child_child_node_symbol_type == "op" and (
                         _child_child_node_symbol_value == "AND" or _child_child_node_symbol_value == "OR")):
@@ -625,8 +629,8 @@ def is_cnf(tree):
 
 
 def is_clause(FOL_Tree):
-    _symbol_type = FOL_Tree.get_element_type()
-    _symbol_value = FOL_Tree.get_element_value()
+    _symbol_type = FOL_Tree.get_type()
+    _symbol_value = FOL_Tree.get_value()
 
     _child_nodes = FOL_Tree.get_child_nodes()
 
@@ -634,8 +638,8 @@ def is_clause(FOL_Tree):
         for i in range(len(_child_nodes)):
             _child_node = _child_nodes[i]
 
-            _child_node_symbol_type = _child_node.get_element_type()
-            _child_node_symbol_value = _child_node.get_element_value()
+            _child_node_symbol_type = _child_node.get_type()
+            _child_node_symbol_value = _child_node.get_value()
 
             if _child_node_symbol_type == "op" and _child_node_symbol_value == "NOT":
                 continue;
@@ -653,16 +657,16 @@ def is_clause(FOL_Tree):
 
 
 def is_literal(FOL_Tree):
-    _symbol_type = FOL_Tree.get_element_type()
-    _symbol_value = FOL_Tree.get_element_value()
+    _symbol_type = FOL_Tree.get_type()
+    _symbol_value = FOL_Tree.get_value()
 
     _child_nodes = FOL_Tree.get_child_nodes()
 
     if (_symbol_type == "op" and _symbol_value == "NOT"):
         _child_node = _child_nodes[0]
 
-        _child_node_symbol_type = _child_node.get_element_type()
-        _child_node_symbol_value = _child_node.get_element_value()
+        _child_node_symbol_type = _child_node.get_type()
+        _child_node_symbol_value = _child_node.get_value()
 
         if _child_node_symbol_type == "predicate":
             return True
@@ -732,20 +736,20 @@ class Argument(object):
 def get_args_from_nodes(nodes):
     args = list()
     for node in nodes:
-        if node.get_element_type() == 'function':
+        if node.get_type() == 'function':
             symbols = node.get_child_nodes()
-            arg_token = ','.join([x.get_element_value() for x in symbols])
-            const = '{0}({1})'.format(node.get_element_value(), arg_token)
+            arg_token = ','.join([x.get_value() for x in symbols])
+            const = '{0}({1})'.format(node.get_value(), arg_token)
             args.append(Argument.make_const(const))
             continue
 
-        if node.get_element_type() == 'symbol':
-            val = node.get_element_value()
+        if node.get_type() == 'symbol':
+            val = node.get_value()
             args.append(Argument.make_const(val))
             continue
 
-        if node.get_element_type() == 'variable':
-            val = node.get_element_value()
+        if node.get_type() == 'variable':
+            val = node.get_value()
             args.append(Argument.make_var(val))
             continue
 
@@ -860,14 +864,14 @@ def clausal_from_ands(and_node):
     for r in or_list:
         for node in r.get_child_nodes():
             # there's only one predicate here, get that
-            if node.get_element_type() == 'op' and node.get_element_value() == 'NOT':
+            if node.get_type() == 'op' and node.get_value() == 'NOT':
                 predicate = node.get_child_nodes()[0]
                 args = get_args_from_nodes(predicate.get_child_nodes())
-                p = Predicate(predicate.get_element_value(), args, True)
+                p = Predicate(predicate.get_value(), args, True)
                 clauses.append(p)
             else:
                 args = get_args_from_nodes(node.get_child_nodes())
-                p = Predicate(node.get_element_value(), args)
+                p = Predicate(node.get_value(), args)
                 clauses.append(p)
 
     return clauses
@@ -1017,11 +1021,11 @@ def find_true_statements(statements):
             statements[i] = determine_if_true(statements[i])
             if statements[i]:
                 results.append(i)
-        except Exception:
+        except BaseException:
             continue
     return results
 
 
-statements = [["(FORALL x (IMPLIES (p x) (q x)))", "(p (f a))", "(NOT (q (f a)))"]]  # this is inconsistent
-
+statements = [["(FORALL x (EXISTS y (p x y)))", "(EXISTS x (FORALL y (NOT (p x y))))"]]  # this is inconsistent
+print()
 print(find_true_statements(statements))
