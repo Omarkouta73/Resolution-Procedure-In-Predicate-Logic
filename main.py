@@ -407,13 +407,52 @@ def all_left(tree):
 def skolemize(tree):
     return True
 
-
+universal_varList = []
 def drop_universal(tree):
-    return True
+    S_type = tree.get_element_type()
+    node = tree
+    children = node.get_child_nodes()
+
+    if len(children) != 2:
+        return tree
+    else:
+        if S_type == "quant":
+            leftNode = children[1]
+            leftNodeValue = leftNode.get_element_value()
+            universal_varList.append(leftNodeValue)
+
+            rightNode = children[0]
+            rightNodeType = rightNode.get_element_type()
+            rightNodeValue = rightNode.get_element_value()
+
+            rightChildChildren = rightNode.get_child_nodes()
+
+            node.set_node(rightNodeType, rightNodeValue)
+            if len(rightChildChildren) == 1:
+                children.pop(1)
+
+            for i in range(0, len(rightChildChildren)):
+                children[i] = rightChildChildren[i]
+
+            drop_universal(node)
+
+        drop_universal(children[0])
+        return tree
 
 
 def fix_symbols(tree):
-    return True
+    node = tree
+    if node.get_element_type() == "variable":
+        if node.get_element_value() not in universal_varList:
+            node.set_node("symbol", node.get_element_value())
+
+    if len(node.get_child_nodes()) == 0:
+        return tree
+
+    for i in range(0, len(node.get_child_nodes())):
+        fix_symbols(node.get_child_nodes()[i])
+
+    return tree
 
 
 def CNF(tree):
@@ -432,7 +471,7 @@ def determine_if_true(statement):
     clauses = []
     for i in range(0, len(statement)):  # for all statements within a list of statement
         tree = parser(statement[i])
-        tree = correct(tree)  # TODO: We DON"T UNDERSTAND WHAT THIS DOES
+        tree = correct(tree)
         tree = remove_conditionals(tree)
         tree = deMorgan(tree)
         tree = double_not(tree)
