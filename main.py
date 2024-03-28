@@ -9,8 +9,8 @@ Reasoning and Knowledge Representation - Assignment 1
 CNF Converter for First Order Logic
 """
 import copy
+import itertools
 import random
-
 
 operations = ["IF", "AND", "OR", "NOT", "IMPLIES"]
 quantifiers = ["FORALL", "EXISTS"]
@@ -48,6 +48,7 @@ class Node:
         for child_node in self.children:
             text += child_node.__str__(level + 1)
         return text
+
 
 def parse_tree(args):
     stack = []
@@ -90,7 +91,6 @@ def parse_tree(args):
     return stack.pop()
 
 
-
 def parser(statements):
     global prev_arg, arg_type
     characters = statements
@@ -124,7 +124,6 @@ def parser(statements):
         args.append(arg_tuple)
 
     return parse_tree(args)
-
 
 
 def correct(tree):
@@ -165,9 +164,7 @@ def correct(tree):
     return tree
 
 
-
 def remove_conditionals(tree):
-    tree = Node("NOT", "x") # TODO: remove this, this is only for IDE help
     parent_type = tree.get_type()
     parent_value = tree.get_value()
 
@@ -394,8 +391,6 @@ def all_left(tree):
 
         return tree
 
-
-
     is_good = prenex_check(tree)
     if is_good:
         return tree
@@ -404,10 +399,81 @@ def all_left(tree):
         return all_left(tree)
 
 
-def skolemize(tree):
-    return True
-
 universal_varList = []
+
+
+def rename(tree, new_type, variable):
+    global universal_varList
+
+    parent = tree
+    children = parent.children
+    parent_value = parent.get_value()
+
+    if parent_value == variable:
+        parent.set_node(new_type, variable)
+        if new_type != "symbol":
+            for i in range(0, len(universal_varList)):
+                parent.add_child(Node("variable", universal_varList[i]))
+
+    else:
+        for i in range(len(children)):
+            tree = rename(children[i], new_type, variable)
+
+    return tree
+
+
+def skolemize(tree):
+    global universal_varList
+    parent = tree
+    parent_type = parent.get_type()
+    parent_value = parent.get_value()
+
+    if parent_type != "quant":
+        universal_varList = []
+        return tree
+
+    children = parent.get_children()
+
+    left_child = children[1]
+    left_child_value = left_child.get_value()
+
+    right_child = children[0]
+    right_child_type = right_child.get_type()
+    right_child_value = right_child.get_value()
+
+    right_child_children = right_child.get_children()
+
+    # if len(right_child_children) == 2:
+    #     right_child_left = right_child_children[1]
+
+    # right_child_right = right_child_children[0]
+
+    if parent_value == "FORALL":
+        universal_varList.append(left_child_value)
+    else:
+        new_type = None
+        if not universal_varList:  # handles the case where there's for all before exists
+            new_type = "symbol"
+        else:
+            new_type = "function"
+
+        rename(tree, new_type, left_child_value)
+
+        parent.set_node(right_child_type, right_child_value)
+
+        if len(right_child_children) == 1:
+            children.pop(1)
+
+        for i in range(0, len(right_child_children)):
+            children[i] = right_child_children[i]
+
+        skolemize(parent)
+
+    skolemize(children[0])
+
+    return tree
+
+
 def drop_universal(tree):
     S_type = tree.get_element_type()
     node = tree
@@ -456,15 +522,471 @@ def fix_symbols(tree):
 
 
 def CNF(tree):
+    parent_type = tree.get_element_type()
+    parent_value = tree.get_element_value()
+
+    children = tree.get_child_nodes()
+    n_child_nodes = len(children)
+
+    if is_cnf(tree):
+        return tree
+
+    if is_clause(tree):
+        new_tree = Node("op", "AND")
+        new_tree.set_children([tree])
+
+        return new_tree
+
+    if is_literal(tree):
+        new_tree = Node("op", "AND")
+
+        new_parent = Node("op", "OR")
+        new_parent.set_children([tree])
+
+        new_tree.set_children([new_parent])
+
+        return new_tree
+
+    if parent_type == "op" and parent_value == "AND" and n_child_nodes > 0:
+        new_children = tree.get_children()
+        for i in range(len(children)):
+            child = children[i]
+            x_tree = CNF(child)
+            x_child_nodes = x_tree.get_children()
+            for x_child_node in x_child_nodes:
+                new_children.append(x_child_node)
+
+        new_tree = Node("op", "AND")
+        new_tree.set_children(new_children)
+
+        return new_tree
+
+    if parent_type == "op" and parent_value == "OR" and n_child_nodes > 0:
+        new_children = []
+        for i in range(len(children)):
+            child = children[i]
+
+            x_tree = CNF(child)
+
+            x_child_nodes = x_tree.get_children()
+            x_children = []
+            for x_child_node in x_child_nodes:
+                x_children.append(x_child_node)
+
+            new_children.append(x_children)
+
+        new_combined_children = list(itertools.product(*new_children))
+
+        new_x_children = []
+        for node_tuple in new_combined_children:
+            _new_x_node = concatenate(node_tuple)
+            new_x_children.append(_new_x_node)
+
+        new_tree = Node("op", "AND")
+        new_tree.set_children(new_x_children)
+
+        return new_tree
+    else:
+        print("Error")
+
+
+def is_cnf(tree):
+    _symbol_type = tree.get_element_type()
+    _symbol_value = tree.get_element_value()
+
+    _child_nodes = tree.get_child_nodes()
+
+    if _symbol_type == "op" and _symbol_value == "AND":
+
+        for i in range(len(_child_nodes)):
+            _child_node = _child_nodes[i]
+
+            _child_node_symbol_type = _child_node.get_element_type()
+            _child_node_symbol_value = _child_node.get_element_value()
+
+            if not (_child_node_symbol_type == "op" and _child_node_symbol_value == "OR"):
+                return False
+
+            _child_child_nodes = _child_node.get_child_nodes()
+
+            for i in range(len(_child_child_nodes)):
+                _child_child_node = _child_child_nodes[i]
+
+                _child_child_node_symbol_type = _child_child_node.get_element_type()
+                _child_child_node_symbol_value = _child_child_node.get_element_value()
+
+                if (_child_child_node_symbol_type == "op" and (
+                        _child_child_node_symbol_value == "AND" or _child_child_node_symbol_value == "OR")):
+                    return False
+    else:
+        return False
+
     return True
 
 
-def clausal_from_ands(tree):
+def is_clause(FOL_Tree):
+    _symbol_type = FOL_Tree.get_element_type()
+    _symbol_value = FOL_Tree.get_element_value()
+
+    _child_nodes = FOL_Tree.get_child_nodes()
+
+    if (_symbol_type == "op" and _symbol_value == "OR"):
+        for i in range(len(_child_nodes)):
+            _child_node = _child_nodes[i]
+
+            _child_node_symbol_type = _child_node.get_element_type()
+            _child_node_symbol_value = _child_node.get_element_value()
+
+            if _child_node_symbol_type == "op" and _child_node_symbol_value == "NOT":
+                continue;
+
+            elif _child_node_symbol_type == "predicate":
+                continue;
+
+            else:
+                return False
+
+    else:
+        return False
+
     return True
 
 
-def resolution(clauses):
-    return True
+def is_literal(FOL_Tree):
+    _symbol_type = FOL_Tree.get_element_type()
+    _symbol_value = FOL_Tree.get_element_value()
+
+    _child_nodes = FOL_Tree.get_child_nodes()
+
+    if (_symbol_type == "op" and _symbol_value == "NOT"):
+        _child_node = _child_nodes[0]
+
+        _child_node_symbol_type = _child_node.get_element_type()
+        _child_node_symbol_value = _child_node.get_element_value()
+
+        if _child_node_symbol_type == "predicate":
+            return True
+
+    if _symbol_type == "predicate":
+        return True
+
+    return False
+
+
+def concatenate(node_tuple):
+    _new_children = []
+    for node in node_tuple:
+        _new_children.extend(node.get_child_nodes())
+
+    parent = Node("op", "OR")
+    parent.set_children(_new_children)
+    return parent
+
+
+VARIABLE = "VARIABLE"
+CONSTANT = "CONSTANT"
+
+
+class Argument(object):
+    def __init__(self, name, kind):
+        self._name = name
+        self._kind = kind
+
+    def is_variable(self):
+        return self._kind == VARIABLE
+
+    def is_constant(self):
+        return self._kind == CONSTANT
+
+    def get_name(self):
+        return self._name
+
+    def set_name(self, name):
+        self._name = name
+
+    def same_kind(self, arg):
+        """
+        Check if the arguments is same
+        :param arg:
+        :return:
+        """
+        return self._kind == arg._kind
+
+    def equals(self, arg):
+        """
+        Checks if the arg and self are same argument
+        :param arg:
+        :return:
+        """
+        return (self.same_kind(arg) and self._name == arg._name)
+
+    @classmethod
+    def make_var(cls, name):
+        return Argument(name, VARIABLE)
+
+    @classmethod
+    def make_const(cls, name):
+        return Argument(name, CONSTANT)
+
+
+def get_args_from_nodes(nodes):
+    args = list()
+    for node in nodes:
+        if node.get_element_type() == 'function':
+            symbols = node.get_child_nodes()
+            arg_token = ','.join([x.get_element_value() for x in symbols])
+            const = '{0}({1})'.format(node.get_element_value(), arg_token)
+            args.append(Argument.make_const(const))
+            continue
+
+        if node.get_element_type() == 'symbol':
+            val = node.get_element_value()
+            args.append(Argument.make_const(val))
+            continue
+
+        if node.get_element_type() == 'variable':
+            val = node.get_element_value()
+            args.append(Argument.make_var(val))
+            continue
+
+    return args
+
+
+class Predicate(object):
+    """
+    Represents a predicate like P(x, y) or -P(x, y)
+    Order of the args and constants matters
+    For a predicate P(x, a, y)
+    Name: P, Args: x, a, y; x is a var, a is constant and y is a var
+    """
+
+    def __init__(self, name, args, negative=False):
+        """
+
+        :param name: string
+        :param args: Argument objects
+        :param negative: bool
+        """
+        self._name = name
+        self._args = args
+        self._negative = negative
+
+    def __str__(self):
+        s = "{0}({1})".format(self._name, ",".join([arg._name for arg in self._args]))
+        if self._negative:
+            return "-" + s
+
+        return s
+
+    def get_name(self):
+        return self._name
+
+    def get_args(self):
+        return self._args
+
+    def get_negative(self):
+        return self._negative
+
+    def same_formula(self, obj):
+        """
+        Checks whether the self and obj has the same for i.e. P(x,y)
+        has same form as P(x,y) and -P(x,y), or P(y, x), or P(a, x)
+        :param obj: Predicate()
+        :return: bool
+        """
+        if self._name != obj._name:
+            return False
+
+        if len(self._args) != len(obj._args):
+            return False
+
+        return True
+
+    def complement_of(self, obj):
+        """
+        Checks whether the
+        :param obj: Predicate()
+        :return:
+        """
+        return (self.same_formula(obj) and self._negative != obj._negative)
+
+    def same_args(self, obj):
+        """
+        Checks if the args in self and obj are same
+        :param obj: Predicate()
+        :return:
+        """
+        for i in range(0, len(obj._args)):
+            if not self._args[i].equals(obj._args[i]):
+                return False
+
+        return True
+
+    def equals(self, obj):
+        """
+        Return true if both objects are P(x,y) and P(x,y)
+        :param obj: Predicate()
+        :return:
+        """
+        if not self.same_formula(obj):
+            return False
+
+        if not self.same_args(obj):
+            return False
+
+        if self._negative != obj._negative:
+            return False
+
+        return True
+
+    def same_predicate(self, obj):
+
+        if self._name != obj._name:
+            return False
+
+        return True
+
+    def complement_of_predicate(self, obj):
+
+        if self.same_predicate(obj) == True and self._negative != obj._negative:
+            return True
+
+        return False
+
+
+def clausal_from_ands(and_node):
+    or_list = and_node.get_children()
+    clauses = list()
+    for r in or_list:
+        for node in r.get_child_nodes():
+            # there's only one predicate here, get that
+            if node.get_element_type() == 'op' and node.get_element_value() == 'NOT':
+                predicate = node.get_child_nodes()[0]
+                args = get_args_from_nodes(predicate.get_child_nodes())
+                p = Predicate(predicate.get_element_value(), args, True)
+                clauses.append(p)
+            else:
+                args = get_args_from_nodes(node.get_child_nodes())
+                p = Predicate(node.get_element_value(), args)
+                clauses.append(p)
+
+    return clauses
+
+
+def unification(p1, p2, replacements):
+    """
+    Takes a two predicates and tries for unifying them which are same, i.e. P(x1, y1) and -P(x1, y1)
+    returns None is couldn't be done else returns the list with unification, and,
+    a dict() with replacements
+    :param replacements:
+    :return: unifiable predicates, p1, p2 and bool if unification could be done or not
+    """
+    p1_args = list(p1.get_args())
+    p2_args = list(p2.get_args())
+
+    if len(p1_args) != len(p2_args):
+        return p1, p2, False
+
+    if p1.same_args(p2):  # return as it is
+        return p1, p2, True
+
+    for i in range(0, len(p1_args)):
+        p1_arg = p1_args[i]
+        p2_arg = p2_args[i]
+
+        if p2_arg.equals(p1_arg):
+            continue
+
+        if p1_arg.is_variable() and p2_arg.is_variable():  # Replace p2 by p1
+            token = replacements.get(p2_arg.get_name(), '')
+            if token == '':
+                token = p1_arg.get_name()
+                replacements[p2_arg.get_name()] = token
+
+            p1_args[i].set_name(token)
+            p2_args[i].set_name(token)
+
+            continue
+
+        const = ''
+        var = ''
+        if p1_arg.is_constant() and p2_arg.is_variable():
+            const = p1_arg.get_name()
+            var = p2_arg.get_name()
+        else:
+            const = p2_arg.get_name()
+            var = p1_arg.get_name()
+
+        if '({0})'.format(const) in var:  # can't to unification
+            return p1, p2, False
+
+        replacements[var] = const
+        p1_args[i].set_name(const)
+        p2_args[i].set_name(const)
+
+    p1._args = p1_args
+    p2._args = p2_args
+
+    return p1, p2, True
+
+
+def addNewClause(refSet, setofSupport):
+    newClause = []
+    for (i, e) in enumerate(refSet):
+        setofSupport.sort(key=len)
+        for (j, k) in enumerate(setofSupport):
+            check = False
+            for (m, n) in enumerate(k):
+                if e.complement_of_predicate(n) or check == True:
+                    check = True
+                    reps = dict()
+                    p1, p2, flag = unification(e, n, reps)
+                    if flag == True:
+                        n = p2
+                        e = p1
+                    else:
+                        continue
+            for (a, b) in enumerate(k):
+                if e.complement_of(b):
+                    newClause = (setofSupport[j])
+                    newClause.remove(b)
+                    for (c, d) in enumerate(refSet):
+                        if d == e:
+                            continue
+                        elif d in newClause:
+                            continue
+                        else:
+                            newClause.append(d)
+                    return newClause
+                else:
+                    continue
+
+    return None
+
+
+def resolution(l):
+    if len(l) == 1:
+        return False
+    setofSupport = list(l)
+    fgh = list(l)
+    sizeFgh = len(fgh)
+    l.sort(key=len)
+    for (x, y) in enumerate(l):
+        refSet = l[x]
+        setofSupport.remove(refSet)
+        newClause = addNewClause(refSet, setofSupport)
+        if newClause == None:
+            return False
+        elif len(newClause) == 0:
+            return True
+        else:
+            if newClause not in fgh:
+                fgh.append(setofSupport)
+
+    newFghSize = len(fgh)
+    if newFghSize > sizeFgh:
+        resolution(fgh)
+    return False
 
 
 def determine_if_true(statement):
