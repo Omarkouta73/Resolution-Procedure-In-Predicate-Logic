@@ -10,7 +10,6 @@ CNF Converter for First Order Logic
 """
 import copy
 
-
 operations = ["IF", "AND", "OR", "NOT", "IMPLIES"]
 quantifiers = ["FORALL", "EXISTS"]
 
@@ -47,6 +46,7 @@ class Node:
         for child_node in self.children:
             text += child_node.__str__(level + 1)
         return text
+
 
 def parse_tree(args):
     stack = []
@@ -89,7 +89,6 @@ def parse_tree(args):
     return stack.pop()
 
 
-
 def parser(statements):
     global prev_arg, arg_type
     characters = statements
@@ -125,13 +124,11 @@ def parser(statements):
     return parse_tree(args)
 
 
-
 def correct(tree):
     return True
 
 
 def remove_conditionals(tree):
-    tree = Node("NOT", "x") # TODO: remove this, this is only for IDE help
     parent_type = tree.get_type()
     parent_value = tree.get_value()
 
@@ -250,7 +247,89 @@ def standardize(tree):
 
 
 def all_left(tree):
-    return True
+    def prenex_check(tree):
+        parent_type = tree.get_type()
+
+        children = tree.get_children()
+
+        if len(children) != 2:
+            return True
+
+        left_child = children[1]
+        left_child_type = left_child.get_type()
+
+        right_child = children[0]
+        right_child_type = right_child.get_type()
+
+        if parent_type != "quant" and (left_child_type == "quant" or right_child_type == "quant"):
+            return False
+        else:
+            return prenex_check(left_child) and prenex_check(right_child)
+
+    def prenex_convert(tree):
+        parent = tree
+        parent_type = parent.get_type()
+
+        children = parent.get_children()
+
+        if len(children) != 2:
+            return tree
+
+        left_child = children[1]
+        left_child_type = left_child.get_type()
+        left_child_value = left_child.get_value()
+        left_child_children = left_child.get_children()
+
+        right_child = children[0]
+        right_child_type = right_child.get_type()
+        right_child_value = right_child.get_value()
+        right_child_children = right_child.get_children()
+
+        if parent_type == "op" and left_child_type == "quant":
+            left_child_left = left_child_children[1]
+            left_child_left_type = left_child_left.get_type()
+            left_child_left_value = left_child_left.get_value()
+
+            temp_type = parent.get_type()
+            temp_value = parent.get_value()
+
+            parent.set_node(left_child_type, left_child_value)
+            left_child.set_node(temp_type, temp_value)
+
+            temp = Node(left_child_left_type, left_child_left_value)
+            left_child.get_children()[1] = left_child.get_children()[0]
+            left_child.get_children()[0] = parent.get_children()[0]
+            parent.get_children()[0] = parent.get_children()[1]
+            parent.get_children()[1] = temp
+
+        elif parent_type == "op" and right_child_type == "quant":
+            right_child_left = right_child_children[1]
+            right_child_left_type = right_child_left.get_type()
+            right_child_left_value = right_child_left.get_value()
+
+            temp_type = parent.get_type()
+            temp_value = parent.get_value()
+
+            parent.set_node(right_child_type, right_child_value)
+            right_child.set_node(temp_type, temp_value)
+
+            temp = Node(right_child_left_type, right_child_left_value)
+            right_child.get_children()[1] = parent.get_children()[1]
+            parent.get_children()[1] = temp
+
+        prenex_convert(left_child)
+        prenex_convert(right_child)
+
+        return tree
+
+
+
+    is_good = prenex_check(tree)
+    if is_good:
+        return tree
+    else:
+        tree = prenex_convert(tree)
+        return all_left(tree)
 
 
 def skolemize(tree):
