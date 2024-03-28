@@ -128,7 +128,42 @@ def parser(statements):
 
 
 def correct(tree):
-    return True
+    S_type = tree.get_element_type()
+    S_value = tree.get_element_value()
+
+    children = tree.get_child_nodes()
+
+    for i in range(len(children)):
+        child = children[i]
+
+        ch_type = child.get_element_type()
+        ch_value = child.get_element_value()
+
+        if (S_type == "function"):
+            if (ch_type == "function"):
+                S_type = "predicate"
+                tree.set_node(S_type, S_value)
+
+        if (S_type == "op" or S_type == "quant"):
+            if (ch_type == "function"):
+                ch_type = "predicate"
+                child.set_node(ch_type, ch_value)
+
+                children[i] = child
+
+        if (S_type == "predicate"):
+            if (ch_type == "symbol"):
+                ch_type = "variable"
+                child.set_node(ch_type, ch_value)
+
+                children[i] = child
+
+        correct(child)
+
+    tree.set_child_nodes(children)
+
+    return tree
+
 
 
 def remove_conditionals(tree):
