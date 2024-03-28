@@ -9,6 +9,7 @@ Reasoning and Knowledge Representation - Assignment 1
 CNF Converter for First Order Logic
 """
 import copy
+import random
 
 
 operations = ["IF", "AND", "OR", "NOT", "IMPLIES"]
@@ -131,7 +132,6 @@ def correct(tree):
 
 
 def remove_conditionals(tree):
-    tree = Node("NOT", "x") # TODO: remove this, this is only for IDE help
     parent_type = tree.get_type()
     parent_value = tree.get_value()
 
@@ -246,11 +246,44 @@ def double_not(tree):
 
 
 def standardize(tree):
-    return True
+    variable_names = {}
+    S_type = tree.get_element_type()
+    S_value = tree.get_element_value()
+
+    children = tree.get_child_nodes()
+
+    if S_type == "quant":
+        child = children[-1]
+
+        ch_type = child.get_element_type()
+        ch_value = child.get_element_value()
+
+        variable_names[ch_value] = ch_value + "_" + str(random.randint(0, 10000))
+
+        child.set_node(ch_type, variable_names[ch_value])
+
+        children[-1] = child
+
+    elif S_type == "function" or S_type == "predicate":
+        for i in range(len(children)):
+            child = children[i]
+            ch_type = child.get_element_type()
+            ch_value = child.get_element_value()
+
+            if ch_value in variable_names:
+                child.set_node(ch_type, variable_names[ch_value])
+
+            children[i] = child
+
+    tree.set_child_nodes(children)
+    for i in range(len(children)):
+        standardize(children[i])
+
+    return tree
 
 
 def all_left(tree):
-    return True
+    pass
 
 
 def skolemize(tree):
@@ -281,7 +314,7 @@ def determine_if_true(statement):
     clauses = []
     for i in range(0, len(statement)):  # for all statements within a list of statement
         tree = parser(statement[i])
-        tree = correct(tree)  # TODO: We DON"T UNDERSTAND WHAT THIS DOES
+        #tree = correct(tree)  # TODO: We DON"T UNDERSTAND WHAT THIS DOES
         tree = remove_conditionals(tree)
         tree = deMorgan(tree)
         tree = double_not(tree)
